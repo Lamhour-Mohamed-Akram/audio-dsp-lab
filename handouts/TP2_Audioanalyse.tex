@@ -1,0 +1,255 @@
+\documentclass[11pt]{article}
+\usepackage{laborstil}
+\hypersetup{
+  pdftitle={TP2: Audioanalyse},
+  pdfsubject={Labor Versuch TP2: Abtastung, Stereo, Spektrum und Filter},
+  pdfkeywords={Digitale Audiosignalverarbeitung, Python, Labor}
+}
+\fusszeile{Digitale Audiosignalverarbeitung, Labor Versuch TP2}
+
+\begin{document}
+
+\titelseite{Audioanalyse mit Python:\\ Abtastung, Stereo, Spektrum und Filter}{Labor Versuch TP2}{TP2\_Audioanalyse.ipynb}
+
+% ---------------------------------------------------------------------
+\section{Hinweise zur Durchführung}
+
+Gerechnet, gezeichnet und angehört wird im zugehörigen Jupyter-Notebook (Dateiname auf der Titelseite). Dieses Heft führt durch den Versuch. Abschnitte und Aufgaben haben im Heft und im Notebook \textbf{dieselben Nummern}. Das Notebook braucht kein anderes Notebook.
+
+\notebooklink{qr/TP2_Audioanalyse_colab.pdf}{https://colab.research.google.com/github/Lamhour-Mohamed-Akram/audio-dsp-lab/blob/main/TP2_Audioanalyse.ipynb}{https://colab.research.google.com/github/Lamhour-Mohamed-Akram/}{audio-dsp-lab/blob/main/TP2\_Audioanalyse.ipynb}
+
+\begin{itemize}
+  \item \textbf{Öffnen:} Link oder QR-Code öffnen, gegebenenfalls mit einem Google-Konto anmelden und die Zellen von oben nach unten mit \textbf{Shift + Enter} ausführen. Eine Warnung, dass das Notebook nicht von Google stammt, mit "`Trotzdem ausführen"' bestätigen.
+  \item \textbf{Antworten:} in dieses Heft \textbf{oder} in eine eigene Kopie des Notebooks (\textit{Datei > Kopie in Drive speichern}). Schreibrechte für das Original sind nicht nötig.
+  \item \textbf{Pflicht und Zusatz:} Pflichtaufgaben bearbeiten alle, Zusatzaufgaben sind freiwillig. \textbf{Zeitbedarf (Schätzung):} Python-Kurzeinführung (4.1) ca. 30 bis 45 Minuten für Einsteiger. Pflichtaufgaben 2.1 bis 2.5 danach ca. 60 bis 90 Minuten.
+  \item \textbf{Arbeitsweise:} immer nur ein oder zwei Parameter ändern, Zelle erneut ausführen, hören, beobachten und notieren. Kopfhörer verwenden.
+\end{itemize}
+
+\subsection{Einrichtung}
+
+Die ersten zwei Code-Zellen installieren nur fehlende Python-Pakete und laden \texttt{speech.wav}, \texttt{music.wav} und \texttt{sound.wav} automatisch in den Ordner \texttt{data/}, falls sie fehlen oder beschädigt sind. Uploads, Google Drive, ein GitHub-Konto oder eine GPU sind nicht nötig. \textbf{Neustart:} Nach \textit{Sitzung neu starten} sind die Variablen weg, die Dateien bleiben. Nach \textit{Laufzeit trennen und löschen} oder in einer neuen Laufzeit sind auch die Dateien weg. Dann Abschnitt 1 und alle Zellen bis zur aktuellen Stelle erneut ausführen, am einfachsten mit \textit{Laufzeit > Alle ausführen}.
+
+\section{Lernziele}
+
+Nach diesem Versuch können Sie
+\begin{itemize}
+  \item einfache Python-Befehle in einem Notebook ausführen und leicht verändern,
+  \item eine Audiodatei laden und Abtastrate, Samples, Dauer, Amplitude und Kanäle bestimmen,
+  \item Aufnahmen anhören, als Wellenform darstellen und einen Ausschnitt vergrößern,
+  \item Stereo und Mono unterscheiden,
+  \item mit der FFT ein Frequenzspektrum berechnen und vorsichtig interpretieren,
+  \item einen Tiefpass und einen Hochpass anwenden und die Wirkung hören und sehen.
+\end{itemize}
+
+% ---------------------------------------------------------------------
+\bigskip
+\section{Vorbereitungsaufgaben}
+
+Bearbeiten Sie diese Aufgaben \textbf{vor} dem Labor. Kurze Antworten genügen.
+
+\begin{block}
+\textbf{V1:} Eine Aufnahme hat die Abtastrate 16000\,Hz und dauert 3 Sekunden. Wie viele Samples hat sie?
+\antwortlinien{1}
+\end{block}
+\begin{block}
+\textbf{V2:} Die höchste Frequenz, die ein digitales Signal enthalten kann, ist die halbe Abtastrate (Nyquist-Frequenz). Wie hoch ist sie bei 16000\,Hz und bei 44100\,Hz?
+\antwortlinien{1}
+\end{block}
+\begin{block}
+\textbf{V3:} Was ist der Unterschied zwischen einer Mono-Aufnahme und einer Stereo-Aufnahme?
+\antwortlinien{2}
+\end{block}
+\begin{block}
+\textbf{V4:} Was macht ein Tiefpass? Was macht ein Hochpass?
+\antwortlinien{2}
+\end{block}
+
+% ---------------------------------------------------------------------
+\bigskip
+\section{Durchführung}
+
+\subsection[Python-Kurzeinführung]{Python-Kurzeinführung (Pflicht, Übungen P1 bis P5)}
+
+\ziel{Die Python-Grundlagen kennenlernen, die in allen Laboren gebraucht werden.}
+
+Das Notebook erklärt Schritt für Schritt: Text- und Code-Zellen, \textbf{Shift + Enter} und die Reihenfolge der Ausführung, \texttt{print} und Variablen, Rechnen, Listen und NumPy-Arrays, Index ab 0 und Ausschnitte, \texttt{import}, einfache \texttt{for}-Schleifen und \texttt{if}-Abfragen, Funktionen mit \texttt{def} und \texttt{return} sowie das Öffnen, Zeichnen und Anhören einer echten Aufnahme.
+
+In Übung P3 wird der \textbf{Betrag} \texttt{abs(wert)} verglichen, weil Audio-Samples auch negativ sind. Ein einzelnes Sample sagt wenig darüber, ob gerade gesprochen wird. Die Sprachaktivitätserkennung in TP4 benutzt deshalb die Energie in kurzen Zeitfenstern.
+
+\begin{block}
+\begin{tabularx}{\linewidth}{|L{1.4cm}|L{6.2cm}|Y|}
+  \hline
+  \textbf{Übung} & \textbf{Aufgabe im Notebook} & \textbf{Ihr Ergebnis} \\ \hline
+  P1 & \param{dauer = 10}: Anzahl der Werte bei 16000\,Hz & \\ \hline
+  P2 & Ausschnitt für die ersten drei Elemente & \\ \hline
+  P3 & \param{schwelle = 0.8}: Welche Werte sind "`groß"'? & \\ \hline
+  P4 & Samples für 25\,ms bei 16000\,Hz & \\ \hline
+  P5 & zwei Zeitpunkte mit Pausen in \texttt{speech.wav} & \\ \hline
+\end{tabularx}
+\end{block}
+
+\subsection[Aufnahmen laden und beschreiben]{Aufnahmen laden und beschreiben (Aufgabe 2.1, Pflicht)}
+
+\ziel{Den "`Steckbrief"' der drei Aufnahmen bestimmen.}
+
+Die Funktion \texttt{steckbrief} zeigt Abtastrate, Kanäle (1 = Mono, 2 = Stereo), Samples, Dauer, Format, Spitzenwert und die Anzahl der Samples mit Betrag ab 0.999. \texttt{PCM\_16} bedeutet 16-Bit-Ganzzahlen, die beim Laden in Werte zwischen -1 und +1 umgerechnet werden. Die Zahl der Samples ab 0.999 ist nur ein \textbf{Hinweis} auf mögliche Übersteuerung, kein Beweis. Echte Übersteuerung erkennt man zum Beispiel an abgeflachten Spitzen in der Wellenform.
+
+\begin{block}
+\aufgabe{2.1}{Pflicht}
+Tragen Sie die Werte in \textbf{Tabelle A} (Abschnitt 5) ein.
+\begin{enumerate}
+  \item Welche Datei hat die höchste Abtastrate?
+  \item Welche Dateien sind Stereo?
+  \item Gibt es Hinweise auf Übersteuerung?
+\end{enumerate}
+\antwortlinien{2}
+\end{block}
+
+\subsection[Wellenform, Zeitpunkt und Ausschnitt]{Wellenform, Zeitpunkt und Ausschnitt (Aufgabe 2.2, Pflicht)}
+
+\ziel{Aufnahmen anhören, Wellenformen vergleichen und einen kurzen Ausschnitt vergrößern.}
+
+\begin{itemize}
+  \item Um eine Zeit in einen Index umzurechnen, multipliziert man mit der Abtastrate \textbf{der jeweiligen Aufnahme}: bei der Sprache mit \param{sr\_sprache}, bei der Musik mit \param{sr\_musik}. Bei Stereo liefert ein Index zwei Werte, links und rechts.
+  \item Die Funktion \texttt{ausschnitt} prüft den Bereich. Gültig: \param{start\_s} ab 0, \param{laenge\_s} größer als 0, und \param{start\_s + laenge\_s} höchstens gleich der Dauer. Sonst erscheint eine verständliche Fehlermeldung.
+  \item Parameter im Notebook: \param{zeitpunkt\_s = 1.5}, \param{start\_s = 4.0} und \param{laenge\_s = 0.05}, zum Anhören \param{hoer\_start\_s = 3.0} und \param{hoer\_laenge\_s = 3.0}.
+\end{itemize}
+
+\begin{block}
+\aufgabe{2.2}{Pflicht}
+\begin{enumerate}
+  \item Beschreiben Sie in \textbf{Tabelle B} kurz die drei Wellenformen und Ihren Höreindruck.
+  \item Warum gehören bei \param{zeitpunkt\_s = 1.5} zu Sprache und Musik verschiedene Indizes?
+  \item Setzen Sie \param{start\_s} auf einen Zeitpunkt in einer Pause (Übung P5). Wie sieht der Ausschnitt jetzt aus? Achten Sie auf die y-Achse.
+  \item Setzen Sie wieder \param{start\_s = 4.0} und dann \param{laenge\_s = 0.5}. Was sehen Sie jetzt von den einzelnen Schwingungen?
+\end{enumerate}
+\antwortlinien{3}
+\end{block}
+
+\subsection[Stereo und Mono]{Stereo und Mono (Aufgabe 2.3, Pflicht)}
+
+\ziel{Hören, was der linke und der rechte Kanal enthalten.}
+
+\begin{itemize}
+  \item \textbf{Mono-Mischung:} (links + rechts) / 2. Aus beiden Seiten kommt dasselbe Signal.
+  \item \textbf{Differenz:} (links - rechts) / 2. Klänge, die in beiden Kanälen gleich sind, heben sich darin auf.
+  \item \textbf{RMS-Wert:} Wurzel aus dem Mittelwert der quadrierten Samples. Er beschreibt den Signalpegel und ist nur ein grobes Maß für die empfundene Lautstärke.
+  \item Das Notebook spielt die ersten 8 Sekunden der Musik ab: Original, nur links, nur rechts, Mono-Mischung und Differenz.
+\end{itemize}
+
+\begin{block}
+\aufgabe{2.3}{Pflicht}
+Hören Sie mit Kopfhörern.
+\begin{enumerate}
+  \item Welche Instrumente hören Sie eher links, welche eher rechts?
+  \item Was hören Sie in der Differenz? Was fehlt dort im Vergleich zum Original?
+  \item Beschreiben Sie den Unterschied zwischen dem Original (stereo) und der Mono-Mischung.
+\end{enumerate}
+\antwortlinien{3}
+\end{block}
+
+\begin{block}
+\zusatz{Z2.1: Korrelation der Kanäle}
+Die Korrelation zeigt, wie stark zwei Signale \textbf{linear} zusammenhängen. Nahe +1: Beide Kanäle verlaufen fast gleich. Nahe -1: Sie verlaufen gegenläufig. Nahe 0: Es gibt keinen linearen Zusammenhang, die Kanäle können trotzdem ähnliche Klänge enthalten, zum Beispiel zeitlich verschoben. Vergleichen Sie die Werte für Musik und Rennwagen. Welche Aufnahme hat den stärkeren linearen Zusammenhang? Passt das zu Ihrem Höreindruck?
+\end{block}
+
+\subsection[Frequenzspektrum mit der FFT]{Frequenzspektrum mit der FFT (Aufgabe 2.4, Pflicht)}
+
+\ziel{Ablesen, welche Frequenzen in einer Aufnahme enthalten sind, und die Grenzen dieser Darstellung erkennen.}
+
+\begin{itemize}
+  \item Die Funktion \texttt{spektrum} berechnet ein \textbf{einseitiges Amplitudenspektrum} in dB. Ein Sinus mit Amplitude 1 ergibt 0\,dB, -20\,dB bedeutet 10-mal kleinere Amplitude. Der Gleichanteil bei 0\,Hz und, bei gerader Länge, die Nyquist-Frequenz werden nicht verdoppelt.
+  \item Ein Testton aus 440\,Hz (Amplitude 0.3) und 1000\,Hz (Amplitude 0.1) zeigt zwei Spitzen bei etwa -10.5\,dB und -20\,dB.
+  \item Echte Sprache und Musik ändern ihre Frequenzen ständig. Die FFT der ganzen Datei mischt alle Momente und zeigt breite Bereiche.
+  \item \textbf{Glättung} (\param{glaettung\_hz=20}) macht die Kurve lesbar, macht scharfe Spitzen aber niedriger und breiter. \textbf{Normierung auf das eigene Maximum} erlaubt nur einen Vergleich der Form, nicht der Gesamtenergie.
+  \item Parameter: \param{max\_frequenz = 8000}, \param{fft\_start\_s = 4.0}, \param{fft\_laenge\_s = 0.1}.
+\end{itemize}
+
+\begin{block}
+\aufgabe{2.4}{Pflicht}
+\begin{enumerate}
+  \item In welchem Frequenzbereich liegt bei der Sprache relativ zu ihrem Maximum die meiste Energie?
+  \item Welche Kurve fällt zu hohen Frequenzen hin am langsamsten ab? Warum darf man daraus nicht schließen, dass diese Aufnahme insgesamt lauter ist?
+  \item Schätzen Sie im kurzen Ausschnitt den Abstand zwischen zwei benachbarten Spitzen. Ändern Sie danach \param{fft\_start\_s} auf 5.0 und auf 2.5. Was beobachten Sie?
+\end{enumerate}
+\antwortlinien{3}
+\end{block}
+
+\subsection[Tiefpass und Hochpass]{Tiefpass und Hochpass (Aufgabe 2.5, Pflicht)}
+
+\ziel{Filter anwenden und die Wirkung hören und im Spektrum sehen.}
+
+\begin{itemize}
+  \item Ein \textbf{Tiefpass} lässt tiefe Frequenzen durch und dämpft hohe. Ein \textbf{Hochpass} lässt hohe Frequenzen durch und dämpft tiefe. Gültige Grenzfrequenzen sind größer als 0 und kleiner als die halbe Abtastrate.
+  \item Die Butterworth-Filter werden mit \texttt{sosfiltfilt} vorwärts und rückwärts angewendet: keine zeitliche Verschiebung im Inneren des Signals, doppelte Dämpfung (bei der Grenzfrequenz etwa -6\,dB statt -3\,dB), kleine Randeffekte am Anfang und Ende möglich.
+  \item Original und gefiltertes Signal werden mit derselben \param{skala} abgespielt. So bleiben Lautstärkeunterschiede hörbar.
+\end{itemize}
+
+\begin{block}
+\aufgabe{2.5}{Pflicht}
+Probieren Sie \param{grenzfrequenz\_tp} = 300, 1000 und 4000 bei der Musik und \param{grenzfrequenz\_hp} = 100, 500 und 2000 bei der Sprache. Tragen Sie in \textbf{Tabelle C} ein, wie sich der Klang verändert, ob die Sprache verständlich bleibt und ob sich der RMS-Wert ändert.
+\end{block}
+
+\begin{block}
+\zusatz{Z2.2: Frequenzgang und Ordnung}
+Ein einzelner Klick (Impuls) wird durch den Tiefpass geschickt. Das Betragsspektrum der Antwort ist der Frequenzgang. Vergleichen Sie \param{z\_ordnung} = 2, 4 und 8 bei \param{z\_grenzfrequenz = 1000}. Wie verändert sich die Steilheit? Bei welcher Dämpfung schneidet die Kurve die Grenzfrequenz?
+\end{block}
+
+% ---------------------------------------------------------------------
+\clearpage
+\section{Auswertung und Diskussion}
+
+\tabtitel{Tabelle A: Eigenschaften der Aufnahmen (Aufgabe 2.1)}
+{\small
+\begin{tabularx}{\linewidth}{|l|Y|Y|Y|Y|Y|Y|}
+  \hline
+  \textbf{Datei} & \textbf{Abtastrate [Hz]} & \textbf{Kanäle} & \textbf{Samples} & \textbf{Dauer [s]} & \textbf{Spitzen\-wert} & \textbf{Samples ab 0.999} \\ \hline
+  speech.wav\schreibzeile & & & & & & \\ \hline
+  music.wav\schreibzeile & & & & & & \\ \hline
+  sound.wav\schreibzeile & & & & & & \\ \hline
+\end{tabularx}}
+
+\tabtitel{Tabelle B: Wellenform und Höreindruck (Aufgabe 2.2)}
+\begin{tabularx}{\linewidth}{|L{2.2cm}|Y|Y|}
+  \hline
+  \textbf{Aufnahme} & \textbf{Wellenform (Pausen, gleichmäßig, lauter werdend, \dots)} & \textbf{Höreindruck} \\ \hline
+  Sprache\schreibzeile & & \\ \hline
+  Musik\schreibzeile & & \\ \hline
+  Rennwagen\schreibzeile & & \\ \hline
+\end{tabularx}
+
+\tabtitel{Tabelle C: Filter (Aufgabe 2.5)}
+{\small
+\begin{tabularx}{\linewidth}{|l|l|L{2.1cm}|Y|L{2.7cm}|}
+  \hline
+  \textbf{Signal} & \textbf{Filter} & \textbf{Grenz\-frequenz [Hz]} & \textbf{Klang und Verständlichkeit} & \textbf{RMS gestiegen, gesunken, gleich?} \\ \hline
+  Musik & Tiefpass & 300\schreibzeile & & \\ \hline
+  Musik & Tiefpass & 1000\schreibzeile & & \\ \hline
+  Musik & Tiefpass & 4000\schreibzeile & & \\ \hline
+  Sprache & Hochpass & 100\schreibzeile & & \\ \hline
+  Sprache & Hochpass & 500\schreibzeile & & \\ \hline
+  Sprache & Hochpass & 2000\schreibzeile & & \\ \hline
+\end{tabularx}}
+
+\subsection*{Fragen}
+\begin{enumerate}[label=\arabic*.]
+  \frage{Warum reicht für Sprache oft eine Abtastrate von 16000\,Hz, während Musik häufig mit 44100\,Hz gespeichert wird?}{2}
+  \frage{Warum zeigt das Spektrum einer ganzen Sprachaufnahme breite Bereiche statt einzelner scharfer Spitzen wie beim Testton?}{2}
+  \frage{Was haben Sie in der Differenz (links - rechts) gehört? Wie erklären Sie Ihre Beobachtung?}{2}
+  \frage{Ab welcher Tiefpass-Grenzfrequenz klang die Musik für Sie noch natürlich? Begründen Sie mit Ihrem Höreindruck und dem Spektrum.}{2}
+  \frage{Wie haben sich Klang, Verständlichkeit und RMS-Wert der Sprache beim Hochpass mit 2000\,Hz verändert? Welche Frequenzanteile wurden gedämpft?}{2}
+\end{enumerate}
+
+% ---------------------------------------------------------------------
+\section{Quellen und Audiodaten}
+
+Die Aufnahmen stammen von Dritten. Für dieses Labor wurden nur Ausschnitte herausgeschnitten und als WAV-Dateien gespeichert (20\,ms Ein- und Ausblenden an den Schnittstellen, sonst keine Bearbeitung). Alle Details stehen in \texttt{DATA\_SOURCES.md} im Repository \url{https://github.com/Lamhour-Mohamed-Akram/audio-dsp-lab}. Die Übersicht aller Versuche mit Links steht dort in der Datei \texttt{README.md}.
+
+{\small
+\begin{itemize}
+  \item \textbf{speech.wav} (16000\,Hz, mono, 15,9\,s): LibriVox-Hörbuch "`Fabeln"' von Magnus Gottfried Lichtwer, Abschnitt "`Das Wiesel und die Hühner"', gelesen von marham63. Lizenz: Public Domain. Quelle: \url{https://archive.org/details/fabeln_1905_librivox}. Ausschnitt 12,8\,s bis 28,7\,s, umgetastet auf 16000\,Hz.
+  \item \textbf{music.wav} (44100\,Hz, stereo, 20,0\,s): Julius Fučík, "`Entrance of the Gladiators"', gespielt von der United States Marine Band. Lizenz: Public Domain (Werk der US-Regierung). Quelle: Wikimedia Commons, Datei \href{https://commons.wikimedia.org/wiki/File:Julius_Fu%C4%8D%C3%ADk%27s_%22Entrance_of_the_Gladiators%22,_performed_by_the_United_States_Marine_Band.flac}{\textit{Julius Fučík's Entrance of the Gladiators, performed by the United States Marine Band.flac}} (\url{https://commons.wikimedia.org}). Ausschnitt 24\,s bis 44\,s.
+  \item \textbf{sound.wav} (22050\,Hz, stereo, 8,0\,s): "`Audi R8 (2000)"', aufgenommen von Edvvc beim Goodwood Festival of Speed 2009. Lizenz: CC BY-SA 3.0, \url{https://creativecommons.org/licenses/by-sa/3.0/}. Quelle: \url{https://commons.wikimedia.org/wiki/File:Audi_R8_(2000).ogg}. Ausschnitt 4\,s bis 12\,s, umgetastet auf 22050\,Hz. Der Ausschnitt steht ebenfalls unter CC BY-SA 3.0.
+\end{itemize}}
+
+\end{document}

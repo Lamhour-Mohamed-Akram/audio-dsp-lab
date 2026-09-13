@@ -1,0 +1,35 @@
+# Python und virtuelle Umgebungen
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Betriebssystem
+.DS_Store
+Thumbs.db
+
+# Vom Notebook erzeugte Laufzeitausgaben
+ausgabe/
+data/*.tmp
+
+# LaTeX-Zwischendateien
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Originale Kursunterlagen und fremde Referenzdateien nicht veroeffentlichen
+*.docx
+*.zip
+fsdd/
+*.npz
+0*_*.ipynb
+mein_akkord.wav
+*.pdf
+!handouts/*.pdf
+!handouts/qr/*.pdf

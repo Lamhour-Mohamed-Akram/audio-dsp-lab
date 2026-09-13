@@ -1,0 +1,234 @@
+\documentclass[11pt]{article}
+\usepackage{laborstil}
+\hypersetup{
+  pdftitle={TP3: Denoising und Equalizer},
+  pdfsubject={Labor Versuch TP3: Rauschen reduzieren und Klang verändern},
+  pdfkeywords={Digitale Audiosignalverarbeitung, Python, Labor}
+}
+\fusszeile{Digitale Audiosignalverarbeitung, Labor Versuch TP3}
+
+\begin{document}
+
+\titelseite{Denoising und Equalizer:\\ Rauschen reduzieren und Klang verändern}{Labor Versuch TP3}{TP3\_Denoising\_Equalizer.ipynb}
+
+% ---------------------------------------------------------------------
+\section{Hinweise zur Durchführung}
+
+Gerechnet, gezeichnet und angehört wird im zugehörigen Jupyter-Notebook (Dateiname auf der Titelseite). Dieses Heft führt durch den Versuch. Abschnitte und Aufgaben haben im Heft und im Notebook \textbf{dieselben Nummern}. Das Notebook braucht kein anderes Notebook.
+
+\notebooklink{qr/TP3_Denoising_Equalizer_colab.pdf}{https://colab.research.google.com/github/Lamhour-Mohamed-Akram/audio-dsp-lab/blob/main/TP3_Denoising_Equalizer.ipynb}{https://colab.research.google.com/github/Lamhour-Mohamed-Akram/}{audio-dsp-lab/blob/main/TP3\_Denoising\_Equalizer.ipynb}
+
+\begin{itemize}
+  \item \textbf{Öffnen:} Link oder QR-Code öffnen, gegebenenfalls mit einem Google-Konto anmelden und die Zellen von oben nach unten mit \textbf{Shift + Enter} ausführen. Eine Warnung, dass das Notebook nicht von Google stammt, mit "`Trotzdem ausführen"' bestätigen.
+  \item \textbf{Antworten:} in dieses Heft \textbf{oder} in eine eigene Kopie des Notebooks (\textit{Datei > Kopie in Drive speichern}). Schreibrechte für das Original sind nicht nötig.
+  \item \textbf{Pflicht und Zusatz:} Pflichtaufgaben bearbeiten alle, Zusatzaufgaben sind freiwillig. \textbf{Zeitbedarf (Schätzung):} Pflichtaufgaben 3.1 bis 3.4 ca. 60 bis 90 Minuten nach der Einrichtung.
+  \item \textbf{Arbeitsweise:} immer nur ein oder zwei Parameter ändern, Zelle erneut ausführen, hören, beobachten und notieren. Kopfhörer verwenden.
+\end{itemize}
+
+\subsection{Einrichtung}
+
+Die ersten zwei Code-Zellen installieren nur fehlende Python-Pakete und laden \texttt{speech.wav} und \texttt{music.wav} automatisch in den Ordner \texttt{data/}, falls sie fehlen oder beschädigt sind. Uploads, Google Drive, ein GitHub-Konto oder eine GPU sind nicht nötig. \textbf{Neustart:} Nach \textit{Sitzung neu starten} sind die Variablen weg, die Dateien bleiben. Nach \textit{Laufzeit trennen und löschen} oder in einer neuen Laufzeit sind auch die Dateien weg. Dann Abschnitt 1 und alle Zellen bis zur aktuellen Stelle erneut ausführen, am einfachsten mit \textit{Laufzeit > Alle ausführen}.
+
+\subsection{Bibliotheken und Hilfsfunktionen}
+
+Eine Zelle lädt die Bibliotheken und die aus TP2 bekannten Hilfsfunktionen, zum Beispiel \texttt{anhoeren} (ohne automatische Lautstärke-Anpassung), \texttt{gemeinsame\_skala} und \texttt{spektrum}.
+
+\section{Lernziele}
+
+Nach diesem Versuch können Sie
+\begin{itemize}
+  \item Störungen reproduzierbar zu einer sauberen Sprachaufnahme hinzufügen,
+  \item ein Brummen mit einem Hochpass verringern und den Nachteil für die Sprache erklären,
+  \item breitbandiges Rauschen mit der spektralen Subtraktion verringern,
+  \item das SNR gegenüber einer sauberen Referenz berechnen,
+  \item Signalähnlichkeit, Verständlichkeit und empfundene Qualität unterscheiden,
+  \item Musik mit einem Equalizer verändern und lauter von besser unterscheiden.
+\end{itemize}
+
+% ---------------------------------------------------------------------
+\bigskip
+\section{Vorbereitungsaufgaben}
+
+Bearbeiten Sie diese Aufgaben \textbf{vor} dem Labor. Kurze Antworten genügen.
+
+\begin{block}
+\textbf{V1:} Das SNR in dB ist 10 mal log10(Leistung des Signals / Leistung der Störung). log10 ist der Logarithmus zur Basis 10. Wie groß ist das SNR, wenn beide gleich viel Leistung haben? Und wenn das Signal 10-mal so viel Leistung hat?
+\antwortlinien{1}
+\end{block}
+\begin{block}
+\textbf{V2:} Das Stromnetz in Europa hat 50\,Hz. Welche Frequenzen hat ein Brummen aus dem Grundton und seinen ersten zwei Vielfachen?
+\antwortlinien{1}
+\end{block}
+\begin{block}
+\textbf{V3:} Weißes Rauschen enthält alle Frequenzen ungefähr gleich stark. Warum kann ein Tiefpass es nicht vollständig entfernen?
+\antwortlinien{2}
+\end{block}
+\begin{block}
+\textbf{V4:} Eine verrauschte Aufnahme wird doppelt so laut gemacht. Was passiert mit dem Verhältnis von Sprache zu Rauschen?
+\antwortlinien{2}
+\end{block}
+
+% ---------------------------------------------------------------------
+\bigskip
+\section{Durchführung}
+
+\subsection{Saubere Referenz und SNR}
+
+\ziel{Verstehen, was das SNR misst und was nicht.}
+
+\texttt{speech.wav} ist die \textbf{saubere Referenz}, alle Störungen erzeugt das Notebook selbst. Der Fehler ist das bearbeitete Signal minus das saubere Signal, und es gilt \textbf{SNR in dB} = 10 mal log10(Leistung des sauberen Signals / Leistung des Fehlers). Ein größeres SNR bedeutet, dass das Ergebnis dem sauberen Signal ähnlicher ist. Jede Abweichung zählt als Fehler, auch wenn ein Filter nützliche Sprache entfernt. Zu unterscheiden sind \textbf{Signalähnlichkeit} (misst das SNR), \textbf{Verständlichkeit} (kann man die Wörter verstehen?) und \textbf{empfundene Qualität} (klingt es angenehm und natürlich?). Die letzten beiden werden durch Hören beurteilt. In der Praxis ist das saubere Signal meist unbekannt, dieser Versuch ist eine Laborsituation.
+
+\subsection[Brummen und Hochpass]{Brummen und Hochpass (Aufgabe 3.1, Pflicht)}
+
+\ziel{Ein Brummen bei tiefen Frequenzen verringern und den Preis dafür erkennen.}
+
+\begin{itemize}
+  \item Das Notebook addiert ein Brummen aus 50\,Hz, 100\,Hz und 150\,Hz (Amplituden 0.03, 0.02 und 0.01).
+  \item Ein Butterworth-Hochpass der Ordnung 6 (vorwärts und rückwärts) dämpft das Brummen. Die Stimme hat aber ebenfalls Anteile bei tiefen Frequenzen.
+  \item Parameter: \param{grenzfrequenz\_brumm}, gültig größer als 0 und kleiner als 8000\,Hz. Das Notebook zeigt SNR vorher, SNR nachher und die Änderung.
+\end{itemize}
+
+\begin{block}
+\aufgabe{3.1}{Pflicht}
+Probieren Sie \param{grenzfrequenz\_brumm} = 60, 120, 200, 400 und 800. Tragen Sie in \textbf{Tabelle A} ein: SNR nachher, ob das SNR gestiegen oder gesunken ist, ob das Brummen noch hörbar ist und wie sich die Stimme verändert. Welche Grenzfrequenz ist für Sie der beste Kompromiss? Begründen Sie mit Ihren Messwerten und Ihrem Höreindruck.
+\antwortlinien{2}
+\end{block}
+
+\begin{block}
+\zusatz{Z3.1: Kerbfilter}
+Ein Kerbfilter (Notch) dämpft nur einen sehr schmalen Bereich um 50, 100 und 150\,Hz. Der Gütefaktor \param{kerb\_q} bestimmt die Breite (sinnvoll etwa 5 bis 100, größer bedeutet schmaler). Vergleichen Sie \param{kerb\_q} = 5, 30 und 100 mit dem besten Hochpass aus Aufgabe 3.1. Was beobachten Sie beim SNR und beim Klang?
+\end{block}
+
+\subsection[Breitbandiges Rauschen]{Breitbandiges Rauschen (Aufgabe 3.2, Pflicht)}
+
+\ziel{Prüfen, was ein Tiefpass gegen Rauschen ausrichtet, das alle Frequenzen enthält.}
+
+\begin{itemize}
+  \item Weißes Rauschen wird mit Zufallszahlen erzeugt. \param{seed=42} sorgt dafür, dass jedes Mal dasselbe Rauschen entsteht. \param{ziel\_snr\_db = 10} legt die Stärke fest.
+  \item Automatisch entsteht zusätzlich eine \textbf{Rauschprobe} von 1 Sekunde, als hätte das Mikrofon vor dem Sprechen kurz nur Rauschen aufgenommen. Sie wird in 4.4 gebraucht.
+  \item Ein Tiefpass dämpft nur Frequenzen oberhalb der Grenzfrequenz. Rauschen im Bereich der Sprache bleibt, und hohe Sprachanteile wie "`s"', "`f"' und "`sch"' werden ebenfalls gedämpft.
+\end{itemize}
+
+\begin{block}
+\aufgabe{3.2}{Pflicht}
+Probieren Sie \param{grenzfrequenz\_tp} = 1000, 3000 und 6000. Ist das SNR gestiegen oder gesunken? Ist das Rauschen noch hörbar? Wie verändert sich die Sprache? Notieren Sie Ihre Beobachtungen in \textbf{Tabelle B}.
+\end{block}
+
+\subsection[Spektrale Subtraktion]{Spektrale Subtraktion (Aufgabe 3.3, Pflicht)}
+
+\ziel{Gleichmäßiges Rauschen mit einer fertigen Funktion verringern und das Ergebnis messen und anhören.}
+
+Sie müssen das Verfahren nicht selbst programmieren. Die Funktion \texttt{spektrale\_subtraktion} arbeitet in vier Schritten:
+\begin{enumerate}[label=\arabic*.]
+  \item Das verrauschte Signal wird in kurze, überlappende Stücke (32\,ms) zerlegt, für jedes Stück wird ein Spektrum berechnet.
+  \item Aus der Rauschprobe wird die mittlere Rauschstärke bei jeder Frequenz berechnet.
+  \item Diese Rauschstärke wird von jedem Spektrum abgezogen. Ein \textbf{Boden} legt fest, wie viel mindestens übrig bleibt.
+  \item Aus den bereinigten Spektren wird wieder ein Zeitsignal.
+\end{enumerate}
+Das funktioniert am besten bei gleichmäßigem Rauschen und entfernt nicht jede Störung. Zu starkes Abziehen erzeugt \textbf{musikalisches Rauschen}, das wie Zwitschern oder Blubbern klingt. Parameter: \param{staerke} (0 bis 5, 1.0 = mittlere Rauschstärke) und \param{boden} (0 bis 1, 0.05 = 5\,\%).
+
+\begin{block}
+\aufgabe{3.3}{Pflicht}
+Probieren Sie \param{staerke} = 0.5, 1.0, 2.0 und 4.0 mit \param{boden = 0.05}. Tragen Sie in \textbf{Tabelle C} das SNR nachher ein und beurteilen Sie Verständlichkeit und Klang (Artefakte, musikalisches Rauschen, dumpf). Bei welcher Einstellung war das SNR am größten? War das auch die Einstellung, die Ihnen am besten gefallen hat?
+\antwortlinien{2}
+\end{block}
+
+\begin{block}
+\zusatz{Z3.2: Boden und Rauschstärke}
+Ändern Sie \param{boden} auf 0.01 und 0.2. Setzen Sie danach in 4.3 \param{ziel\_snr\_db} auf 0 und auf 20 und führen Sie die Zellen in 4.3 und 4.4 erneut aus. Wie verändern sich SNR und Klang?
+\end{block}
+
+\subsection[Equalizer: lauter oder besser?]{Equalizer: lauter oder besser? (Aufgabe 3.4, Pflicht)}
+
+\ziel{Lautstärke und Klangqualität auseinanderhalten.}
+
+\begin{itemize}
+  \item \textbf{a) Lauter ist nicht besser:} \param{verstaerkung} macht Sprache und Rauschen gleich stark lauter, das SNR bleibt gleich. Werte über 1 werden hier \textbf{absichtlich} mit \texttt{np.clip} abgeschnitten. Diese künstlich erzeugte Übersteuerung verzerrt das Signal. Gültig: \param{verstaerkung} größer als 0.
+  \item \textbf{b) Equalizer:} Tiefen unter 250\,Hz, Höhen über 4000\,Hz, Mitten als Rest. Jedes Band erhält eine Verstärkung in dB: +6\,dB ist etwa die doppelte Amplitude, -6\,dB etwa die halbe. Gültig: -24\,dB bis +12\,dB. Der Equalizer verändert den Klang, er ist keine Rauschunterdrückung.
+  \item \textbf{Gleiche Skala:} Pegelunterschiede bleiben hörbar. \textbf{Gleicher RMS-Wert:} Beide Versionen haben denselben Signalpegel, man vergleicht eher die Klangfarbe. Gleicher RMS bedeutet aber nicht sicher gleiche empfundene Lautstärke.
+\end{itemize}
+
+\begin{block}
+\aufgabe{3.4}{Pflicht}
+\begin{enumerate}
+  \item Probieren Sie \param{verstaerkung} = 2 und 4. Wie viele Samples schneidet \texttt{np.clip} jeweils ab? Wie klingt die Übersteuerung? Hat sich das SNR durch die Verstärkung allein verändert?
+  \item Stellen Sie die Einstellungen aus \textbf{Tabelle D} ein (\param{tiefen\_db}, \param{mitten\_db}, \param{hoehen\_db}). Beschreiben Sie den Klang einmal mit gleicher Skala und einmal mit gleichem RMS-Wert. Welche Version fanden Sie jeweils "`besser"', und lag das eher an der Lautstärke oder am Klang?
+\end{enumerate}
+\antwortlinien{3}
+\end{block}
+
+\begin{block}
+\zusatz{Z3.3: Ergebnis als WAV-Datei speichern}
+Die entrauschte Sprache wird als \texttt{ausgabe/sprache\_entrauscht.wav} gespeichert. In Colab liegt die Datei links unter \textit{Dateien} und kann mit Rechtsklick heruntergeladen werden. Nach dem Löschen der Laufzeit ist sie weg.
+\end{block}
+
+% ---------------------------------------------------------------------
+\clearpage
+\section{Auswertung und Diskussion}
+
+\tabtitel{Tabelle A: Brummen und Hochpass (Aufgabe 3.1)}
+{\small
+\begin{tabularx}{\linewidth}{|L{2.75cm}|L{1.6cm}|L{1.7cm}|L{2.0cm}|Y|Y|}
+  \hline
+  \textbf{grenzfrequenz\_\allowbreak brumm [Hz]} & \textbf{SNR vorher [dB]} & \textbf{SNR nachher [dB]} & \textbf{gestiegen / gesunken} & \textbf{Brummen hörbar?} & \textbf{Stimme verändert?} \\ \hline
+  60\schreibzeile & & & & & \\ \hline
+  120\schreibzeile & & & & & \\ \hline
+  200\schreibzeile & & & & & \\ \hline
+  400\schreibzeile & & & & & \\ \hline
+  800\schreibzeile & & & & & \\ \hline
+\end{tabularx}}
+
+\tabtitel{Tabelle B: Tiefpass bei breitbandigem Rauschen (Aufgabe 3.2)}
+{\small
+\begin{tabularx}{\linewidth}{|L{2.75cm}|L{1.6cm}|L{1.7cm}|Y|Y|}
+  \hline
+  \textbf{grenzfrequenz\_\allowbreak tp [Hz]} & \textbf{SNR vorher [dB]} & \textbf{SNR nachher [dB]} & \textbf{Rauschen hörbar?} & \textbf{Sprache verändert?} \\ \hline
+  1000\schreibzeile & & & & \\ \hline
+  3000\schreibzeile & & & & \\ \hline
+  6000\schreibzeile & & & & \\ \hline
+\end{tabularx}}
+
+\tabtitel{Tabelle C: Spektrale Subtraktion, ziel\_snr\_db = 10, boden = 0.05 (Aufgabe 3.3)}
+{\small
+\begin{tabularx}{\linewidth}{|L{1.6cm}|L{1.6cm}|L{1.7cm}|Y|Y|}
+  \hline
+  \textbf{staerke} & \textbf{SNR vorher [dB]} & \textbf{SNR nachher [dB]} & \textbf{Verständlichkeit} & \textbf{Klang, Artefakte} \\ \hline
+  0.5\schreibzeile & & & & \\ \hline
+  1.0\schreibzeile & & & & \\ \hline
+  2.0\schreibzeile & & & & \\ \hline
+  4.0\schreibzeile & & & & \\ \hline
+\end{tabularx}}
+
+\tabtitel{Tabelle D: Equalizer (Aufgabe 3.4 b)}
+{\small
+\begin{tabularx}{\linewidth}{|L{1.9cm}|L{2.0cm}|L{2.0cm}|Y|Y|}
+  \hline
+  \textbf{tiefen\_db} & \textbf{mitten\_db} & \textbf{hoehen\_db} & \textbf{Klang bei gleicher Skala} & \textbf{Klang bei gleichem RMS} \\ \hline
+  +6\schreibzeile & 0 & 0 & & \\ \hline
+  -12\schreibzeile & 0 & 0 & & \\ \hline
+  0\schreibzeile & 0 & +6 & & \\ \hline
+  0\schreibzeile & 0 & -12 & & \\ \hline
+\end{tabularx}}
+
+\subsection*{Fragen}
+\begin{enumerate}[label=\arabic*.]
+  \frage{Warum kann ein Hochpass ein Brummen bei 50\,Hz verringern, aber kein weißes Rauschen im Sprachbereich?}{2}
+  \frage{Wie hat sich das SNR in Aufgabe 3.1 mit steigender Grenzfrequenz verändert? Erklären Sie Ihre Beobachtung.}{2}
+  \frage{Hat die Einstellung mit dem größten SNR in Aufgabe 3.3 auch am besten geklungen? Erklären Sie mit den Begriffen Signalähnlichkeit, Verständlichkeit und empfundene Qualität.}{2}
+  \frage{Beschreiben Sie das musikalische Rauschen, falls Sie es gehört haben. Bei welcher Einstellung war es am deutlichsten?}{2}
+  \frage{Was hat die Verstärkung in Aufgabe 3.4 a) am SNR verändert, und was hat die Übersteuerung verändert?}{2}
+  \frage{Warum ist ein Vergleich mit gleichem RMS-Wert fairer als ein Vergleich mit gleicher Skala, und warum ist er trotzdem nicht perfekt?}{2}
+\end{enumerate}
+
+% ---------------------------------------------------------------------
+\section{Quellen und Audiodaten}
+
+Die Aufnahmen stammen von Dritten. Für dieses Labor wurden nur Ausschnitte herausgeschnitten und als WAV-Dateien gespeichert (20\,ms Ein- und Ausblenden an den Schnittstellen, sonst keine Bearbeitung). Alle Details stehen in \texttt{DATA\_SOURCES.md} im Repository \url{https://github.com/Lamhour-Mohamed-Akram/audio-dsp-lab}. Die Übersicht aller Versuche mit Links steht dort in der Datei \texttt{README.md}.
+
+{\small
+\begin{itemize}
+  \item \textbf{speech.wav} (16000\,Hz, mono, 15,9\,s): LibriVox-Hörbuch "`Fabeln"' von Magnus Gottfried Lichtwer, Abschnitt "`Das Wiesel und die Hühner"', gelesen von marham63. Lizenz: Public Domain. Quelle: \url{https://archive.org/details/fabeln_1905_librivox}. Ausschnitt 12,8\,s bis 28,7\,s, umgetastet auf 16000\,Hz.
+  \item \textbf{music.wav} (44100\,Hz, stereo, 20,0\,s): Julius Fučík, "`Entrance of the Gladiators"', gespielt von der United States Marine Band. Lizenz: Public Domain (Werk der US-Regierung). Quelle: Wikimedia Commons, Datei \href{https://commons.wikimedia.org/wiki/File:Julius_Fu%C4%8D%C3%ADk%27s_%22Entrance_of_the_Gladiators%22,_performed_by_the_United_States_Marine_Band.flac}{\textit{Julius Fučík's Entrance of the Gladiators, performed by the United States Marine Band.flac}} (\url{https://commons.wikimedia.org}). Ausschnitt 24\,s bis 44\,s.
+\end{itemize}}
+
+\end{document}

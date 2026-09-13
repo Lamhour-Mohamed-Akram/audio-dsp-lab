@@ -1,0 +1,13 @@
+# Python-Pakete fuer die Notebooks TP2, TP3 und TP4
+# (in Google Colab sind alle bereits vorinstalliert)
+numpy>=1.24
+scipy>=1.10
+matplotlib>=3.7
+librosa>=0.10
+soundfile>=0.12
+ipython>=8.0
+# zum lokalen Ausfuehren des Notebooks:
+jupyter
+ipykernel
+# optional, nur zum Neuerzeugen der QR-Codes in handouts/qr/:
+# segno

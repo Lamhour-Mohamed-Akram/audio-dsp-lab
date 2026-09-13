@@ -1,0 +1,225 @@
+\documentclass[11pt]{article}
+\usepackage{laborstil}
+\hypersetup{
+  pdftitle={TP4: Spektrogramm und Sprachaktivität},
+  pdfsubject={Labor Versuch TP4: Frequenzen über der Zeit und Sprachaktivitätserkennung},
+  pdfkeywords={Digitale Audiosignalverarbeitung, Python, Labor}
+}
+\fusszeile{Digitale Audiosignalverarbeitung, Labor Versuch TP4}
+
+\begin{document}
+
+\titelseite{Spektrogramm und Sprachaktivität:\\ Frequenzen über der Zeit}{Labor Versuch TP4}{TP4\_Spektrogramm\_Sprachaktivitaet.ipynb}
+
+% ---------------------------------------------------------------------
+\section{Hinweise zur Durchführung}
+
+Gerechnet, gezeichnet und angehört wird im zugehörigen Jupyter-Notebook (Dateiname auf der Titelseite). Dieses Heft führt durch den Versuch. Abschnitte und Aufgaben haben im Heft und im Notebook \textbf{dieselben Nummern}. Das Notebook braucht kein anderes Notebook.
+
+\notebooklink{qr/TP4_Spektrogramm_Sprachaktivitaet_colab.pdf}{https://colab.research.google.com/github/Lamhour-Mohamed-Akram/audio-dsp-lab/blob/main/TP4_Spektrogramm_Sprachaktivitaet.ipynb}{https://colab.research.google.com/github/Lamhour-Mohamed-Akram/}{audio-dsp-lab/blob/main/TP4\_Spektrogramm\_Sprachaktivitaet.ipynb}
+
+\begin{itemize}
+  \item \textbf{Öffnen:} Link oder QR-Code öffnen, gegebenenfalls mit einem Google-Konto anmelden und die Zellen von oben nach unten mit \textbf{Shift + Enter} ausführen. Eine Warnung, dass das Notebook nicht von Google stammt, mit "`Trotzdem ausführen"' bestätigen.
+  \item \textbf{Antworten:} in dieses Heft \textbf{oder} in eine eigene Kopie des Notebooks (\textit{Datei > Kopie in Drive speichern}). Schreibrechte für das Original sind nicht nötig.
+  \item \textbf{Pflicht und Zusatz:} Pflichtaufgaben bearbeiten alle, Zusatzaufgaben sind freiwillig. \textbf{Zeitbedarf (Schätzung):} Pflichtaufgaben 4.1 bis 4.4 ca. 60 bis 90 Minuten nach der Einrichtung.
+  \item \textbf{Arbeitsweise:} immer nur ein oder zwei Parameter ändern, Zelle erneut ausführen, hören, beobachten und notieren. Kopfhörer verwenden.
+\end{itemize}
+
+\subsection{Einrichtung}
+
+Die ersten zwei Code-Zellen installieren nur fehlende Python-Pakete und laden \texttt{speech.wav}, \texttt{music.wav} und \texttt{sound.wav} automatisch in den Ordner \texttt{data/}, falls sie fehlen oder beschädigt sind. Uploads, Google Drive, ein GitHub-Konto oder eine GPU sind nicht nötig. \textbf{Neustart:} Nach \textit{Sitzung neu starten} sind die Variablen weg, die Dateien bleiben. Nach \textit{Laufzeit trennen und löschen} oder in einer neuen Laufzeit sind auch die Dateien weg. Dann Abschnitt 1 und alle Zellen bis zur aktuellen Stelle erneut ausführen, am einfachsten mit \textit{Laufzeit > Alle ausführen}.
+
+\subsection{Bibliotheken und Hilfsfunktionen}
+
+Eine Zelle lädt die Bibliotheken und die aus TP2 bekannten Hilfsfunktionen, zum Beispiel \texttt{anhoeren} (ohne automatische Lautstärke-Anpassung), \texttt{gemeinsame\_skala} und \texttt{spektrum}.
+
+\section{Lernziele}
+
+Nach diesem Versuch können Sie
+\begin{itemize}
+  \item den Unterschied zwischen dem Spektrum der ganzen Aufnahme und einem Spektrogramm erklären,
+  \item Spektrogramme von Sprache, Musik und Geräusch lesen und vergleichen,
+  \item ein Mel-Spektrogramm in einfachen Worten erklären,
+  \item mit der Kurzzeit-Energie ungefähr erkennen, wann gesprochen wird,
+  \item zeigen, wann diese Methode versagt (Rauschen, leise Sprache),
+  \item Sprachaktivitätserkennung, Sprechererkennung und Spracherkennung unterscheiden.
+\end{itemize}
+
+% ---------------------------------------------------------------------
+\bigskip
+\section{Vorbereitungsaufgaben}
+
+Bearbeiten Sie diese Aufgaben \textbf{vor} dem Labor. Kurze Antworten genügen.
+
+\begin{block}
+\textbf{V1:} Ein Spektrogramm benutzt Fenster von 32\,ms. Wie viele Samples sind das bei 16000\,Hz?
+\antwortlinien{1}
+\end{block}
+\begin{block}
+\textbf{V2:} Das Spektrum der ganzen Aufnahme zeigt nicht, wann eine Frequenz vorkommt. Warum ist das bei Sprache ein Nachteil?
+\antwortlinien{2}
+\end{block}
+\begin{block}
+\textbf{V3:} Menschen hören den Unterschied zwischen 100\,Hz und 200\,Hz sehr deutlich, zwischen 8000\,Hz und 8100\,Hz kaum. Was bedeutet das für eine gehörgerechte Frequenzachse?
+\antwortlinien{2}
+\end{block}
+\begin{block}
+\textbf{V4:} Erklären Sie den Unterschied zwischen den Fragen: Wann spricht jemand? Wer spricht? Was wird gesagt?
+\antwortlinien{2}
+\end{block}
+
+% ---------------------------------------------------------------------
+\bigskip
+\section{Durchführung}
+
+\subsection[Vom Spektrum zum Spektrogramm]{Vom Spektrum zum Spektrogramm (Aufgabe 4.1, Pflicht)}
+
+\ziel{Sehen, wie sich der Frequenzinhalt über der Zeit ändert.}
+
+Die FFT der ganzen Aufnahme mischt alle Zeitpunkte zusammen. Ein \textbf{Spektrogramm} zerlegt das Signal in kurze, überlappende Fenster, berechnet für jedes Fenster eine FFT und zeigt die Spektren nebeneinander: x-Achse Zeit, y-Achse Frequenz, Farbe Stärke (hell = stark, 0\,dB = stärkster Punkt des Bildes). Parameter: \param{n\_fft} ist die Fensterlänge in Samples (gültig 64 bis 8192), \param{hop} der Schritt von Fenster zu Fenster (gültig 1 bis \param{n\_fft}). Voreinstellung: \param{n\_fft = 512} (32\,ms bei 16000\,Hz) und \param{hop = 128}.
+
+\begin{block}
+\aufgabe{4.1}{Pflicht}
+\begin{enumerate}
+  \item Finden Sie im Spektrogramm die Pausen (dunkle senkrechte Streifen). Nennen Sie zwei Zeitpunkte.
+  \item In Vokalen sieht man viele waagerechte Linien übereinander. Was stellen sie dar?
+  \item Setzen Sie \param{n\_fft = 128} und danach \param{n\_fft = 2048}. Was wird jeweils schärfer: die zeitliche Darstellung oder die Frequenzdarstellung?
+\end{enumerate}
+\antwortlinien{2}
+\end{block}
+
+\subsection[Sprache, Musik, Geräusch und Mel-Spektrogramm]{Sprache, Musik, Geräusch und Mel-Spektrogramm (Aufgabe 4.2, Pflicht)}
+
+\ziel{Typische Muster erkennen und die Mel-Skala kennenlernen.}
+
+\begin{itemize}
+  \item Das Notebook zeigt die Spektrogramme aller drei Aufnahmen untereinander. Stereo wird nur für die Darstellung zu Mono gemittelt.
+  \item Das Gehör unterscheidet tiefe Frequenzen fein und hohe grob. Die \textbf{Mel-Skala} bildet das nach. Ein \textbf{Mel-Spektrogramm} fasst die FFT-Frequenzen zu wenigen Mel-Bändern zusammen. Solche Bilder werden häufig als Eingabe für KI-Modelle benutzt, zum Beispiel für neuronale Netze, die Audio wie ein Bild verarbeiten.
+  \item Parameter: \param{n\_mels}, die Anzahl der Mel-Bänder (gültig 8 bis 128, Voreinstellung 64).
+\end{itemize}
+
+\begin{block}
+\aufgabe{4.2}{Pflicht}
+\begin{enumerate}
+  \item Beschreiben Sie in \textbf{Tabelle A} das typische Muster jeder Aufnahme. Achten Sie auf Pausen, lange waagerechte Linien (gehaltene Töne), senkrechte Striche (Schläge, Knacken), steigende oder fallende Linien (Tonhöhe ändert sich) und breites Rauschen.
+  \item Setzen Sie \param{n\_mels = 20} und danach \param{n\_mels = 128}. Wie verändert sich das Mel-Spektrogramm? Sind Pausen und Vokale noch zu erkennen?
+\end{enumerate}
+\antwortlinien{2}
+\end{block}
+
+\subsection[Sprachaktivität mit der Kurzzeit-Energie]{Sprachaktivität mit der Kurzzeit-Energie (Aufgabe 4.3, Pflicht)}
+
+\ziel{Ungefähr erkennen, wann in \texttt{speech.wav} gesprochen wird (Voice Activity Detection, VAD).}
+
+\begin{enumerate}[label=\arabic*.]
+  \item Das Signal wird in überlappende Fenster zerlegt (25\,ms lang, Schritt 10\,ms). Das letzte Fenster endet genau am Ende der Aufnahme.
+  \item Für jedes Fenster wird die Energie berechnet: der Mittelwert der quadrierten Samples.
+  \item Die Energie wird in dB umgerechnet, 0\,dB ist das lauteste Fenster. Fenster ohne jede Energie erhalten minus unendlich dB.
+  \item Fenster über der Schwelle \param{schwelle\_db} gelten als aktiv (gültig -100 bis 0\,dB).
+  \item Aktive Fenster, die sich überlappen oder berühren, bilden einen Abschnitt vom Anfang des ersten bis zum Ende des letzten aktiven Fensters.
+\end{enumerate}
+Die Grenzen sind \textbf{ungefähr} und entsprechen nicht genau den Wortgrenzen. Findet die Methode nichts, meldet das Notebook das, statt abzubrechen.
+
+\begin{block}
+\aufgabe{4.3}{Pflicht}
+Probieren Sie \param{schwelle\_db} = -10, -20, -30, -40 und -50. Tragen Sie in \textbf{Tabelle B} die Anzahl der Abschnitte, den Anteil aktiver Fenster und Ihre Beobachtung ein: Fehlen Teile von Wörtern? Werden Pausen als aktiv markiert? Hören Sie dazu auch die aneinandergehängten aktiven Abschnitte an.
+\end{block}
+
+\subsection[Grenzen der Methode]{Grenzen der Methode (Aufgabe 4.4, Pflicht)}
+
+\ziel{Zeigen, wann eine Energie-Schwelle versagt.}
+
+\begin{itemize}
+  \item \textbf{a) Rauschen:} Das Notebook erzeugt die verrauschte Sprache selbst (\param{seed=42}, \param{vad\_snr\_db = 10}, Vorschläge 20, 10, 0) und wendet \param{schwelle\_rauschen\_db = -30} an.
+  \item \textbf{b) Leise Sprache:} Die zweite Hälfte wird mit \param{leise\_faktor = 0.03} (etwa -30\,dB, gültig 0 bis 1) leiser gemacht. Die Schwelle \param{schwelle\_leise\_db = -30} bezieht sich auf das lauteste Fenster der ganzen Aufnahme.
+\end{itemize}
+
+\begin{block}
+\aufgabe{4.4}{Pflicht}
+\begin{enumerate}
+  \item Beobachten Sie bei \param{vad\_snr\_db = 10} und \param{schwelle\_rauschen\_db = -30}, welche Bereiche als aktiv markiert werden. Suchen Sie eine Schwelle, bei der die Pausen wieder als inaktiv erkannt werden (\textbf{Tabelle C}).
+  \item Welche Teile der leisen zweiten Hälfte werden bei \param{schwelle\_leise\_db = -30} erkannt? Suchen Sie eine Schwelle, bei der die leise Sprache erkannt wird.
+  \item Gibt es eine gemeinsame Schwelle, die für beide Aufnahmen gut funktioniert? Was folgt daraus für diese einfache Methode?
+\end{enumerate}
+\antwortlinien{2}
+\end{block}
+
+\subsection{Wann, wer, was? Drei verschiedene Aufgaben}
+
+{\small
+\begin{tabularx}{\linewidth}{|L{3.9cm}|L{2.4cm}|Y|L{3.0cm}|}
+  \hline
+  \textbf{Aufgabe} & \textbf{Frage} & \textbf{Beispiel für ein Ergebnis} & \textbf{In diesem Labor} \\ \hline
+  Sprach\-aktivitäts\-erkennung (VAD) & Wann wird gesprochen? & "`aktiv von 0,4\,s bis 2,1\,s"' & ja, einfach, mit der Kurzzeit-Energie \\ \hline
+  Sprechererkennung (speaker identification) & Wer spricht? & "`Person A"' & nein \\ \hline
+  Spracherkennung (ASR) & Was wird gesagt? & der gesprochene Text & nein \\ \hline
+\end{tabularx}}
+
+\medskip
+Eine Energie-Schwelle unterscheidet nur zwischen viel und wenig Energie: Laute Geräusche können als Sprache gelten, leise Sprache kann übersehen werden. Sie sagt nichts darüber, wer spricht oder was gesagt wird. \texttt{speech.wav} enthält eine einzige Sprecherstimme, damit kann man Sprechererkennung weder üben noch testen. Beide brauchen trainierte Modelle, in diesem Labor wird kein Modell trainiert.
+
+\subsection[Zusatzaufgabe Z4.1: Echo]{Zusatzaufgabe Z4.1: Echo (optional)}
+
+Ein Echo ist eine verzögerte, leisere Kopie: Ausgang = Original + \param{daempfung} mal (Original, um \param{verzoegerung\_ms} später). Gültig: \param{verzoegerung\_ms} 1 bis 2000, \param{daempfung} 0 bis 1. Vergleichen Sie \param{verzoegerung\_ms} = 50, 300 und 1000 sowie \param{daempfung} = 0.3 und 0.8. Wann hören Sie ein deutliches Echo? Wann klingt es eher wie ein Raum oder eine Klangfärbung?
+
+\subsection[Zusatzaufgabe Z4.2: MFCC]{Zusatzaufgabe Z4.2: MFCC (optional)}
+
+MFCCs fassen jedes Fenster des Mel-Spektrogramms in wenigen Zahlen zusammen (\param{n\_mfcc = 13}, gültig 2 bis 40) und beschreiben grob die Klangfarbe. Sie sind klassische Eingaben für Verfahren des Maschinellen Lernens. Vergleichen Sie das MFCC-Bild mit dem Mel-Spektrogramm aus 4.2. Wo erkennen Sie die Pausen?
+
+% ---------------------------------------------------------------------
+\clearpage
+\section{Auswertung und Diskussion}
+
+\tabtitel{Tabelle A: Muster im Spektrogramm (Aufgabe 4.2 a)}
+\begin{tabularx}{\linewidth}{|L{2.4cm}|Y|}
+  \hline
+  \textbf{Aufnahme} & \textbf{Typisches Muster} \\ \hline
+  Sprache\rule{0pt}{1.1cm} & \\ \hline
+  Musik\rule{0pt}{1.1cm} & \\ \hline
+  Rennwagen\rule{0pt}{1.1cm} & \\ \hline
+\end{tabularx}
+
+\tabtitel{Tabelle B: Schwelle der Sprachaktivitätserkennung für speech.wav (Aufgabe 4.3)}
+{\small
+\begin{tabularx}{\linewidth}{|L{2.1cm}|L{2.0cm}|L{2.4cm}|Y|}
+  \hline
+  \textbf{schwelle\_\allowbreak db} & \textbf{Anzahl Abschnitte} & \textbf{Anteil aktiver Fenster [\%]} & \textbf{Beobachtung (Wortteile fehlen? Pausen aktiv?)} \\ \hline
+  -10\schreibzeile & & & \\ \hline
+  -20\schreibzeile & & & \\ \hline
+  -30\schreibzeile & & & \\ \hline
+  -40\schreibzeile & & & \\ \hline
+  -50\schreibzeile & & & \\ \hline
+\end{tabularx}}
+
+\tabtitel{Tabelle C: Grenzen der Methode (Aufgabe 4.4)}
+{\small
+\begin{tabularx}{\linewidth}{|L{3.2cm}|L{3.2cm}|L{2.2cm}|Y|}
+  \hline
+  \textbf{Aufnahme} & \textbf{Einstellung} & \textbf{geeignete Schwelle [dB]} & \textbf{Beobachtung} \\ \hline
+  verrauschte Sprache\schreibzeile & vad\_snr\_db = 10 & & \\ \hline
+  zweite Hälfte leise\schreibzeile & leise\_faktor = 0.03 & & \\ \hline
+\end{tabularx}}
+
+\subsection*{Fragen}
+\begin{enumerate}[label=\arabic*.]
+  \frage{Was zeigt ein Spektrogramm, was das FFT-Spektrum der ganzen Aufnahme nicht zeigt?}{2}
+  \frage{Was haben Sie bei \param{n\_fft = 128} und \param{n\_fft = 2048} beobachtet? Erklären Sie Ihre Beobachtung mit Zeit und Frequenz.}{2}
+  \frage{Warum passt die Mel-Skala besser zum menschlichen Hören als eine lineare Frequenzachse?}{2}
+  \frage{Welche Schwelle fanden Sie für \texttt{speech.wav} am geeignetsten? Wie hat sich dieselbe Schwelle bei der verrauschten und bei der leisen Aufnahme verhalten?}{2}
+  \frage{Warum kann eine Energie-Schwelle nicht erkennen, wer spricht oder was gesagt wird?}{2}
+  \frage{Nennen Sie eine Anwendung, in der Sprachaktivitätserkennung nützlich ist.}{1}
+\end{enumerate}
+
+% ---------------------------------------------------------------------
+\section{Quellen und Audiodaten}
+
+Die Aufnahmen stammen von Dritten. Für dieses Labor wurden nur Ausschnitte herausgeschnitten und als WAV-Dateien gespeichert (20\,ms Ein- und Ausblenden an den Schnittstellen, sonst keine Bearbeitung). Alle Details stehen in \texttt{DATA\_SOURCES.md} im Repository \url{https://github.com/Lamhour-Mohamed-Akram/audio-dsp-lab}. Die Übersicht aller Versuche mit Links steht dort in der Datei \texttt{README.md}.
+
+{\small
+\begin{itemize}
+  \item \textbf{speech.wav} (16000\,Hz, mono, 15,9\,s): LibriVox-Hörbuch "`Fabeln"' von Magnus Gottfried Lichtwer, Abschnitt "`Das Wiesel und die Hühner"', gelesen von marham63. Lizenz: Public Domain. Quelle: \url{https://archive.org/details/fabeln_1905_librivox}. Ausschnitt 12,8\,s bis 28,7\,s, umgetastet auf 16000\,Hz.
+  \item \textbf{music.wav} (44100\,Hz, stereo, 20,0\,s): Julius Fučík, "`Entrance of the Gladiators"', gespielt von der United States Marine Band. Lizenz: Public Domain (Werk der US-Regierung). Quelle: Wikimedia Commons, Datei \href{https://commons.wikimedia.org/wiki/File:Julius_Fu%C4%8D%C3%ADk%27s_%22Entrance_of_the_Gladiators%22,_performed_by_the_United_States_Marine_Band.flac}{\textit{Julius Fučík's Entrance of the Gladiators, performed by the United States Marine Band.flac}} (\url{https://commons.wikimedia.org}). Ausschnitt 24\,s bis 44\,s.
+  \item \textbf{sound.wav} (22050\,Hz, stereo, 8,0\,s): "`Audi R8 (2000)"', aufgenommen von Edvvc beim Goodwood Festival of Speed 2009. Lizenz: CC BY-SA 3.0, \url{https://creativecommons.org/licenses/by-sa/3.0/}. Quelle: \url{https://commons.wikimedia.org/wiki/File:Audi_R8_(2000).ogg}. Ausschnitt 4\,s bis 12\,s, umgetastet auf 22050\,Hz. Der Ausschnitt steht ebenfalls unter CC BY-SA 3.0.
+\end{itemize}}
+
+\end{document}
