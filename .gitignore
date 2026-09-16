@@ -33,3 +33,4 @@ mein_akkord.wav
 *.pdf
 !handouts/*.pdf
 !handouts/qr/*.pdf
+*.ipynb
